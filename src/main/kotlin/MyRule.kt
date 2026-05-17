@@ -1,4 +1,4 @@
-package 
+package org.shadowbooster.detekt
 
 import io.gitlab.arturbosch.detekt.api.CodeSmell
 import io.gitlab.arturbosch.detekt.api.Config
