@@ -1,4 +1,4 @@
-package 
+package org.shadowbooster.detekt
 
 import io.gitlab.arturbosch.detekt.api.Config
 import io.gitlab.arturbosch.detekt.api.RuleSet

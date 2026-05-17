@@ -3,7 +3,7 @@ plugins {
     `maven-publish`
 }
 
-group = ""
+group = "org.shadowbooster"
 version = "1.0-SNAPSHOT"
 
 dependencies {

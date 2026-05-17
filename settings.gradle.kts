@@ -1,4 +1,4 @@
-rootProject.name = ""
+rootProject.name = "compatibility-detekt-rules"
 
 dependencyResolutionManagement {
     repositories {
