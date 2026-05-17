@@ -1,4 +1,4 @@
-package org.example.detekt
+package 
 
 import io.gitlab.arturbosch.detekt.api.Config
 import io.gitlab.arturbosch.detekt.rules.KotlinCoreEnvironmentTest
