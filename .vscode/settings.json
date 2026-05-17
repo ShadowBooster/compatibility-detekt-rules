@@ -1,5 +1,5 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.configuration.updateBuildConfiguration": "automatic",
     "nixEnvSelector.nixFile": "${workspaceFolder}/shell.nix",
     "nixEnvSelector.useFlakes": false
 }
