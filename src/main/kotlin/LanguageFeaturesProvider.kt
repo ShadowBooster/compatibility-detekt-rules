@@ -13,7 +13,7 @@ class LanguageFeaturesProvider : RuleSetProvider {
                 Kotlin11FeaturesRule(config),
                 Kotlin13FeaturesRule(config),
                 Kotlin15FeaturesRule(config),
-                Kotlin20FeaturesRule(config),
+                Kotlin19FeaturesRule(config),
             )
         )
     }

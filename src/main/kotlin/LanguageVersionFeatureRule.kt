@@ -17,7 +17,7 @@ import org.jetbrains.kotlin.lexer.KtTokens
  *
  * Reads `language-version` from the rule's detekt config block (e.g. "1.0", "1.3", "2.0").
  * A finding is only reported when the configured language version is strictly less than
- * [sinceVersion], meaning the feature is unavailable at the declared version.
+ * [stable or expermental since], meaning the feature is unavailable at the declared version.
  *
  * Example detekt.yml:
  * ```yaml
@@ -30,7 +30,8 @@ import org.jetbrains.kotlin.lexer.KtTokens
  */
 abstract class LanguageVersionFeatureRule(
     config: Config,
-    private val sinceVersion: KotlinVersion,
+    private val experimentalSince: KotlinVersion,
+    private val stableSince: KotlinVersion,
 ) : Rule(config) {
 
     companion object {
@@ -38,20 +39,21 @@ abstract class LanguageVersionFeatureRule(
         const val LANGUAGE_VERSION_DEFAULT = "2.2"
     }
 
-    /**
-     * The configured target language version, parsed lazily once per rule instance.
-     * Defaults to 2.2 (i.e. no findings) when not explicitly configured.
-     */
+    abstract val majorIssue: Issue
+    abstract val minorIssue: Issue?
+
+    override val issue get() = majorIssue
+
     private val languageVersion: KotlinVersion by lazy {
         val raw = valueOrDefault(LANGUAGE_VERSION_KEY, LANGUAGE_VERSION_DEFAULT)
         parseKotlinVersion(raw)
     }
 
-    /**
-     * Returns true when the feature introduced in [sinceVersion] would not be
-     * available at the configured [languageVersion].
-     */
-    protected fun featureUnavailable(): Boolean = languageVersion < sinceVersion
+    protected fun activeIssue(): Issue? = when {
+        languageVersion < experimentalSince -> majorIssue
+        languageVersion < stableSince -> minorIssue
+        else -> null
+    }
 
     private fun parseKotlinVersion(version: String): KotlinVersion {
         val parts = version.trim().split(".")
@@ -62,30 +64,33 @@ abstract class LanguageVersionFeatureRule(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Kotlin 1.1 — suspend functions
-// ---------------------------------------------------------------------------
-
 class Kotlin11FeaturesRule(config: Config = Config.empty) : LanguageVersionFeatureRule(
     config,
-    sinceVersion = KotlinVersion(1, 1),
+    experimentalSince = KotlinVersion(1, 1),
+    stableSince = KotlinVersion(1, 3),
 ) {
-    override val issue = Issue(
+    override val majorIssue = Issue(
+        id = "Kotlin11Features",
+        severity = Severity.Defect,
+        description = "Detects suspend functions before Kotlin 1.1 (not yet experimental)",
+        debt = Debt.FIVE_MINS,
+    )
+
+    override val minorIssue = Issue(
         id = "Kotlin11Features",
         severity = Severity.Minor,
-        description = "Detects Kotlin 1.1+ features (suspend functions)",
+        description = "Detects suspend functions before Kotlin 1.3 (experimental only)",
         debt = Debt.FIVE_MINS,
     )
 
     override fun visitNamedFunction(function: KtNamedFunction) {
-        if (featureUnavailable() &&
-            function.modifierList?.hasModifier(KtTokens.SUSPEND_KEYWORD) == true
-        ) {
+        val issue = activeIssue()
+        if (issue != null && function.modifierList?.hasModifier(KtTokens.SUSPEND_KEYWORD) == true) {
             report(
                 CodeSmell(
                     issue = issue,
                     entity = Entity.from(function),
-                    message = "Uses suspend function (Kotlin 1.1+)",
+                    message = "Uses suspend function (experimental since Kotlin 1.1, stable since Kotlin 1.3)",
                 )
             )
         }
@@ -93,32 +98,35 @@ class Kotlin11FeaturesRule(config: Config = Config.empty) : LanguageVersionFeatu
     }
 }
 
-// ---------------------------------------------------------------------------
-// Kotlin 1.3 — inline classes, unsigned types
-// ---------------------------------------------------------------------------
-
 class Kotlin13FeaturesRule(config: Config = Config.empty) : LanguageVersionFeatureRule(
     config,
-    sinceVersion = KotlinVersion(1, 3),
+    experimentalSince = KotlinVersion(1, 3),
+    stableSince = KotlinVersion(1, 5),
 ) {
-    override val issue = Issue(
+    override val majorIssue = Issue(
+        id = "Kotlin13Features",
+        severity = Severity.Defect,
+        description = "Detects Kotlin 1.3+ features (inline classes, unsigned types) before experimental",
+        debt = Debt.FIVE_MINS,
+    )
+
+    override val minorIssue = Issue(
         id = "Kotlin13Features",
         severity = Severity.Minor,
-        description = "Detects Kotlin 1.3+ features (inline classes, unsigned types)",
-        debt = Debt.FIVE_MINS,
+        description = "Detects Kotlin 1.3+ features (inline classes, unsigned types) before stable",
+        debt = Debt.FIVE_MINS, 
     )
 
     private val unsignedTypes = setOf("UByte", "UInt", "ULong", "UShort")
 
     override fun visitClassOrObject(classOrObject: KtClassOrObject) {
-        if (featureUnavailable() &&
-            classOrObject.modifierList?.hasModifier(KtTokens.INLINE_KEYWORD) == true
-        ) {
+        val issue = activeIssue()
+        if (issue != null && classOrObject.modifierList?.hasModifier(KtTokens.INLINE_KEYWORD) == true) {
             report(
                 CodeSmell(
                     issue = issue,
                     entity = Entity.from(classOrObject),
-                    message = "Uses inline class (Kotlin 1.3+)",
+                    message = "Uses inline class (experimental since Kotlin 1.3, stable since Kotlin 1.5)",
                 )
             )
         }
@@ -126,14 +134,15 @@ class Kotlin13FeaturesRule(config: Config = Config.empty) : LanguageVersionFeatu
     }
 
     override fun visitImportDirective(importDirective: KtImportDirective) {
-        if (featureUnavailable()) {
+        val issue = activeIssue()
+        if (issue != null) {
             val importedName = importDirective.importedFqName?.shortName()?.asString()
             if (importedName in unsignedTypes) {
                 report(
                     CodeSmell(
                         issue = issue,
                         entity = Entity.from(importDirective),
-                        message = "Uses unsigned types (Kotlin 1.3+)",
+                        message = "Uses unsigned types (experimental since Kotlin 1.3, stable since Kotlin 1.5)",
                     )
                 )
             }
@@ -142,30 +151,28 @@ class Kotlin13FeaturesRule(config: Config = Config.empty) : LanguageVersionFeatu
     }
 }
 
-// ---------------------------------------------------------------------------
-// Kotlin 1.5 — @JvmInline value classes
-// ---------------------------------------------------------------------------
-
 class Kotlin15FeaturesRule(config: Config = Config.empty) : LanguageVersionFeatureRule(
     config,
-    sinceVersion = KotlinVersion(1, 5),
+    experimentalSince = KotlinVersion(1, 5),
+    stableSince = KotlinVersion(1, 5),
 ) {
-    override val issue = Issue(
+    override val majorIssue = Issue(
         id = "Kotlin15Features",
-        severity = Severity.Minor,
-        description = "Detects Kotlin 1.5+ features (@JvmInline value classes)",
+        severity = Severity.Defect,
+        description = "Detects @JvmInline value classes before Kotlin 1.5",
         debt = Debt.FIVE_MINS,
     )
 
+    override val minorIssue: Issue? = null
+
     override fun visitAnnotationEntry(annotationEntry: KtAnnotationEntry) {
-        if (featureUnavailable() &&
-            annotationEntry.shortName?.asString() == "JvmInline"
-        ) {
+        val issue = activeIssue()
+        if (issue != null && annotationEntry.shortName?.asString() == "JvmInline") {
             report(
                 CodeSmell(
                     issue = issue,
                     entity = Entity.from(annotationEntry),
-                    message = "Uses @JvmInline value class (Kotlin 1.5+)",
+                    message = "Uses @JvmInline value class (stable since Kotlin 1.5)",
                 )
             )
         }
@@ -173,31 +180,36 @@ class Kotlin15FeaturesRule(config: Config = Config.empty) : LanguageVersionFeatu
     }
 }
 
-// ---------------------------------------------------------------------------
-// Kotlin 2.0 — data objects
-// ---------------------------------------------------------------------------
-
-class Kotlin20FeaturesRule(config: Config = Config.empty) : LanguageVersionFeatureRule(
+class Kotlin19FeaturesRule(config: Config = Config.empty) : LanguageVersionFeatureRule(
     config,
-    sinceVersion = KotlinVersion(2, 0),
+    experimentalSince = KotlinVersion(1, 8),
+    stableSince = KotlinVersion(1, 9),
 ) {
-    override val issue = Issue(
-        id = "Kotlin20Features",
+    override val majorIssue = Issue(
+        id = "Kotlin19Features",
+        severity = Severity.Defect,
+        description = "Detects data objects before Kotlin 1.8 (not yet experimental)",
+        debt = Debt.FIVE_MINS,
+    )
+
+    override val minorIssue = Issue(
+        id = "Kotlin19Features",
         severity = Severity.Minor,
-        description = "Detects Kotlin 2.0+ features (data objects)",
+        description = "Detects data objects before Kotlin 1.9 (experimental only)",
         debt = Debt.FIVE_MINS,
     )
 
     override fun visitObjectDeclaration(declaration: KtObjectDeclaration) {
-        if (!declaration.isCompanion() &&
-            featureUnavailable() &&
+        val issue = activeIssue()
+        if (issue != null &&
+            !declaration.isCompanion() &&
             declaration.modifierList?.hasModifier(KtTokens.DATA_KEYWORD) == true
         ) {
             report(
                 CodeSmell(
                     issue = issue,
                     entity = Entity.from(declaration),
-                    message = "Uses data object (Kotlin 2.0+)",
+                    message = "Uses data object (experimental since Kotlin 1.8, stable since Kotlin 1.9)",
                 )
             )
         }

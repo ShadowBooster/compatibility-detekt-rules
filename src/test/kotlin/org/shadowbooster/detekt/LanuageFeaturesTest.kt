@@ -1,3 +1,4 @@
+import io.gitlab.arturbosch.detekt.api.Severity
 import io.gitlab.arturbosch.detekt.test.TestConfig
 import io.gitlab.arturbosch.detekt.test.lint
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -20,7 +21,7 @@ class Kotlin11FeaturesRuleTest {
     """.trimIndent()
 
     @Nested
-    inner class `language-version below 1_1` {
+    inner class `language-version below 1_1 — before experimental` {
 
         private val rule = Kotlin11FeaturesRule(configWithVersion("1.0"))
 
@@ -30,8 +31,14 @@ class Kotlin11FeaturesRuleTest {
         }
 
         @Test
+        fun `reports with Major severity`() {
+            rule.lint(suspendCode).first().issue.severity shouldBe Severity.Defect
+        }
+
+        @Test
         fun `reports message correctly`() {
-            rule.lint(suspendCode).first().message shouldBe "Uses suspend function (Kotlin 1.1+)"
+            rule.lint(suspendCode).first().message shouldBe
+                "Uses suspend function (experimental since Kotlin 1.1, stable since Kotlin 1.3)"
         }
 
         @Test
@@ -52,18 +59,55 @@ class Kotlin11FeaturesRuleTest {
     }
 
     @Nested
-    inner class `language-version at 1_1` {
+    inner class `language-version at 1_1 — experimental` {
 
         private val rule = Kotlin11FeaturesRule(configWithVersion("1.1"))
 
         @Test
-        fun `does not report a suspend function when version matches`() {
+        fun `reports a suspend function`() {
+            rule.lint(suspendCode) shouldHaveSize 1
+        }
+
+        @Test
+        fun `reports with Minor severity`() {
+            rule.lint(suspendCode).first().issue.severity shouldBe Severity.Minor
+        }
+
+        @Test
+        fun `does not report a plain function`() {
+            rule.lint(plainCode).shouldBeEmpty()
+        }
+    }
+
+    @Nested
+    inner class `language-version 1_2 — still experimental` {
+
+        private val rule = Kotlin11FeaturesRule(configWithVersion("1.2"))
+
+        @Test
+        fun `reports a suspend function`() {
+            rule.lint(suspendCode) shouldHaveSize 1
+        }
+
+        @Test
+        fun `reports with Minor severity`() {
+            rule.lint(suspendCode).first().issue.severity shouldBe Severity.Minor
+        }
+    }
+
+    @Nested
+    inner class `language-version at 1_3 — stable` {
+
+        private val rule = Kotlin11FeaturesRule(configWithVersion("1.3"))
+
+        @Test
+        fun `does not report a suspend function`() {
             rule.lint(suspendCode).shouldBeEmpty()
         }
     }
 
     @Nested
-    inner class `language-version above 1_1` {
+    inner class `language-version above 1_3` {
 
         private val rule = Kotlin11FeaturesRule(configWithVersion("2.0"))
 
@@ -91,7 +135,7 @@ class Kotlin13FeaturesRuleTest {
     private val uintImportCode  = "import kotlin.UInt"
 
     @Nested
-    inner class `language-version below 1_3` {
+    inner class `language-version below 1_3 — before experimental` {
 
         private val rule = Kotlin13FeaturesRule(configWithVersion("1.0"))
 
@@ -101,8 +145,30 @@ class Kotlin13FeaturesRuleTest {
         }
 
         @Test
+        fun `reports inline class with Major severity`() {
+            rule.lint(inlineClassCode).first().issue.severity shouldBe Severity.Defect
+        }
+
+        @Test
+        fun `reports inline class message correctly`() {
+            rule.lint(inlineClassCode).first().message shouldBe
+                "Uses inline class (experimental since Kotlin 1.3, stable since Kotlin 1.5)"
+        }
+
+        @Test
         fun `reports UInt import`() {
             rule.lint(uintImportCode) shouldHaveSize 1
+        }
+
+        @Test
+        fun `reports UInt import with Major severity`() {
+            rule.lint(uintImportCode).first().issue.severity shouldBe Severity.Defect
+        }
+
+        @Test
+        fun `reports unsigned import message correctly`() {
+            rule.lint(uintImportCode).first().message shouldBe
+                "Uses unsigned types (experimental since Kotlin 1.3, stable since Kotlin 1.5)"
         }
 
         @Test
@@ -149,34 +215,76 @@ class Kotlin13FeaturesRuleTest {
     }
 
     @Nested
-    inner class `language-version at 1_3` {
+    inner class `language-version at 1_3 — experimental` {
 
         private val rule = Kotlin13FeaturesRule(configWithVersion("1.3"))
 
         @Test
-        fun `does not report inline class when version matches`() {
+        fun `reports inline class`() {
+            rule.lint(inlineClassCode) shouldHaveSize 1
+        }
+
+        @Test
+        fun `reports inline class with Minor severity`() {
+            rule.lint(inlineClassCode).first().issue.severity shouldBe Severity.Minor
+        }
+
+        @Test
+        fun `reports UInt import`() {
+            rule.lint(uintImportCode) shouldHaveSize 1
+        }
+
+        @Test
+        fun `reports UInt import with Minor severity`() {
+            rule.lint(uintImportCode).first().issue.severity shouldBe Severity.Minor
+        }
+    }
+
+    @Nested
+    inner class `language-version 1_4 — still experimental` {
+
+        private val rule = Kotlin13FeaturesRule(configWithVersion("1.4"))
+
+        @Test
+        fun `reports inline class with Minor severity`() {
+            rule.lint(inlineClassCode).first().issue.severity shouldBe Severity.Minor
+        }
+
+        @Test
+        fun `reports UInt import with Minor severity`() {
+            rule.lint(uintImportCode).first().issue.severity shouldBe Severity.Minor
+        }
+    }
+
+    @Nested
+    inner class `language-version at 1_5 — stable` {
+
+        private val rule = Kotlin13FeaturesRule(configWithVersion("1.5"))
+
+        @Test
+        fun `does not report inline class`() {
             rule.lint(inlineClassCode).shouldBeEmpty()
         }
 
         @Test
-        fun `does not report unsigned import when version matches`() {
+        fun `does not report unsigned import`() {
             rule.lint(uintImportCode).shouldBeEmpty()
         }
     }
 
     @Nested
-    inner class `language-version above 1_3` {
+    inner class `language-version above 1_5` {
 
-        private val rule = Kotlin13FeaturesRule(configWithVersion("1.1"))
+        private val rule = Kotlin13FeaturesRule(configWithVersion("2.0"))
 
         @Test
-        fun `reports inline class for version 1_1`() {
-            rule.lint(inlineClassCode) shouldHaveSize 1
+        fun `does not report inline class`() {
+            rule.lint(inlineClassCode).shouldBeEmpty()
         }
 
         @Test
-        fun `reports unsigned import for version 1_1`() {
-            rule.lint(uintImportCode) shouldHaveSize 1
+        fun `does not report unsigned import`() {
+            rule.lint(uintImportCode).shouldBeEmpty()
         }
     }
 }
@@ -189,7 +297,7 @@ class Kotlin15FeaturesRuleTest {
     """.trimIndent()
 
     @Nested
-    inner class `language-version below 1_5` {
+    inner class `language-version below 1_5 — before stable (no experimental phase)` {
 
         private val rule = Kotlin15FeaturesRule(configWithVersion("1.0"))
 
@@ -199,9 +307,14 @@ class Kotlin15FeaturesRuleTest {
         }
 
         @Test
+        fun `reports with Major severity`() {
+            rule.lint(jvmInlineCode).first().issue.severity shouldBe Severity.Defect
+        }
+
+        @Test
         fun `reports message correctly`() {
             rule.lint(jvmInlineCode).first().message shouldBe
-                "Uses @JvmInline value class (Kotlin 1.5+)"
+                "Uses @JvmInline value class (stable since Kotlin 1.5)"
         }
 
         @Test
@@ -224,37 +337,48 @@ class Kotlin15FeaturesRuleTest {
     }
 
     @Nested
-    inner class `language-version at 1_5` {
+    inner class `language-version 1_3 — still before stable` {
+
+        private val rule = Kotlin15FeaturesRule(configWithVersion("1.3"))
+
+        @Test
+        fun `reports JvmInline with Major severity`() {
+            rule.lint(jvmInlineCode).first().issue.severity shouldBe Severity.Defect
+        }
+    }
+
+    @Nested
+    inner class `language-version at 1_5 — stable` {
 
         private val rule = Kotlin15FeaturesRule(configWithVersion("1.5"))
 
         @Test
-        fun `does not report when version matches`() {
+        fun `does not report JvmInline annotation`() {
             rule.lint(jvmInlineCode).shouldBeEmpty()
         }
     }
 
     @Nested
-    inner class `language-version 1_3 — still below 1_5` {
+    inner class `language-version above 1_5` {
 
-        private val rule = Kotlin15FeaturesRule(configWithVersion("1.3"))
+        private val rule = Kotlin15FeaturesRule(configWithVersion("2.0"))
 
         @Test
-        fun `reports JvmInline for version 1_3`() {
-            rule.lint(jvmInlineCode) shouldHaveSize 1
+        fun `does not report JvmInline annotation`() {
+            rule.lint(jvmInlineCode).shouldBeEmpty()
         }
     }
 }
 
-class Kotlin20FeaturesRuleTest {
+class Kotlin19FeaturesRuleTest {
 
     private val dataObjectCode  = "data object Singleton"
     private val plainObjectCode = "object MySingleton { fun greet() = \"hello\" }"
 
     @Nested
-    inner class `language-version below 2_0` {
+    inner class `language-version below 1_8 — before experimental` {
 
-        private val rule = Kotlin20FeaturesRule(configWithVersion("1.0"))
+        private val rule = Kotlin19FeaturesRule(configWithVersion("1.0"))
 
         @Test
         fun `reports a data object`() {
@@ -262,8 +386,14 @@ class Kotlin20FeaturesRuleTest {
         }
 
         @Test
+        fun `reports with Major severity`() {
+            rule.lint(dataObjectCode).first().issue.severity shouldBe Severity.Defect
+        }
+
+        @Test
         fun `reports message correctly`() {
-            rule.lint(dataObjectCode).first().message shouldBe "Uses data object (Kotlin 2.0+)"
+            rule.lint(dataObjectCode).first().message shouldBe
+                "Uses data object (experimental since Kotlin 1.8, stable since Kotlin 1.9)"
         }
 
         @Test
@@ -294,31 +424,52 @@ class Kotlin20FeaturesRuleTest {
     }
 
     @Nested
-    inner class `language-version at 2_0` {
+    inner class `language-version at 1_8 — experimental` {
 
-        private val rule = Kotlin20FeaturesRule(configWithVersion("2.0"))
+        private val rule = Kotlin19FeaturesRule(configWithVersion("1.8"))
 
         @Test
-        fun `does not report a data object when version matches`() {
+        fun `reports a data object`() {
+            rule.lint(dataObjectCode) shouldHaveSize 1
+        }
+
+        @Test
+        fun `reports with Minor severity`() {
+            rule.lint(dataObjectCode).first().issue.severity shouldBe Severity.Minor
+        }
+
+        @Test
+        fun `does not report a plain object`() {
+            rule.lint(plainObjectCode).shouldBeEmpty()
+        }
+    }
+
+    @Nested
+    inner class `language-version at 1_9 — stable` {
+
+        private val rule = Kotlin19FeaturesRule(configWithVersion("1.9"))
+
+        @Test
+        fun `does not report a data object`() {
             rule.lint(dataObjectCode).shouldBeEmpty()
         }
     }
 
     @Nested
-    inner class `language-version 1_9 — still below 2_0` {
+    inner class `language-version above 1_9` {
 
-        private val rule = Kotlin20FeaturesRule(configWithVersion("1.9"))
+        private val rule = Kotlin19FeaturesRule(configWithVersion("2.0"))
 
         @Test
-        fun `reports data object for version 1_9`() {
-            rule.lint(dataObjectCode) shouldHaveSize 1
+        fun `does not report a data object`() {
+            rule.lint(dataObjectCode).shouldBeEmpty()
         }
     }
 
     @Nested
     inner class `default language-version` {
 
-        private val rule = Kotlin20FeaturesRule()
+        private val rule = Kotlin19FeaturesRule()
 
         @Test
         fun `does not report when using default version`() {
