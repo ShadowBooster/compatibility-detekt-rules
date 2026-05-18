@@ -45,9 +45,14 @@ abstract class LanguageVersionFeatureRule(
     override val issue get() = majorIssue
 
     private val languageVersion: KotlinVersion by lazy {
-        val raw = valueOrDefault(LANGUAGE_VERSION_KEY, LANGUAGE_VERSION_DEFAULT)
-        parseKotlinVersion(raw)
+        val fromCompiler = compilerResources?.languageVersionSettings?.languageVersion
+        if (fromCompiler != null) {
+            KotlinVersion(fromCompiler.major, fromCompiler.minor)
+        } else {
+            parseKotlinVersion(valueOrDefault(LANGUAGE_VERSION_KEY, LANGUAGE_VERSION_DEFAULT))
+        }
     }
+
 
     protected fun activeIssue(): Issue? = when {
         languageVersion < experimentalSince -> majorIssue
