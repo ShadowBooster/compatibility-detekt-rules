@@ -1,3 +1,10 @@
-MyRuleSet:
-  MyRule:
+anguage-features:
+  active: true
+  Kotlin11Features:
+    active: true
+  Kotlin13Features:
+    active: true
+  Kotlin15Features:
+    active: true
+  Kotlin19Features:
     active: true

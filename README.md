@@ -1,25 +1,29 @@
+[![](https://jitpack.io/v/ShadowBooster/compatibility-detekt-rules.svg)](https://jitpack.io/#ShadowBooster/compatibility-detekt-rules)
 # Compatibitity-Detekt-Rules
 A basic extenction of Detekt rules to detect compatibility issues. 
 
 This is made for a bachelor thesis project for University of Twente. 
 
 ## usage
-In the dependencies block of your build.gradle file, add the following:
+Step 1. Add the JitPack repository to your build file.
+
+Add it in your settings.gradle.kts at the end of repositories:
 ```kotlin
-detektPlugins("org.shadowbooster.detekt:compatibility-detekt-rules:0.1")
+	dependencyResolutionManagement {
+		repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+		repositories {
+			mavenCentral()
+			maven { url = uri("https://jitpack.io") }
+		}
+	}
 ```
 
-or if you're using a libs.version.toml file, add this there:
+Step 2. Add the dependency
 ```kotlin
-compatibility-detekt-rules = { module = "org.shadowbooster.detekt:compatibility-detekt-rules", version = "0.1" }
+	dependencies {
+	        implementation("com.github.ShadowBooster:compatibility-detekt-rules:Tag")
+	}
 ```
-
-and this in your build.gradle file:
-```kotlin
-detektPlugins(rootProject.libs.shadowbooster.detekt.rules)
-```
-
-You can find the latest version [here]()
 
 ## Configuration
 TODO
