@@ -1,3 +1,5 @@
+package com.shadowbooster.detekt
+
 import io.gitlab.arturbosch.detekt.api.Config
 import io.gitlab.arturbosch.detekt.api.Debt
 import io.gitlab.arturbosch.detekt.api.CodeSmell
